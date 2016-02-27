@@ -23,12 +23,18 @@ class Musei(Resource):
 
 class Collezioni(Resource):
     def get(self, museo):
-        res = service.FindCollezione(museo)
+        res = service.FindCollezioniMuseo(museo)
         return json.dumps([dict(r) for r in res]), 200
+    
+class CollezioneSingola(Resource):
+    def get(self, collezione):
+#         res = service.FindCollezione(collezione)
+        return 0
 
 
 api.add_resource(Musei, "/musei/")
 api.add_resource(Collezioni, "/musei/<int:museo>/")
+api.add_resource(CollezioneSingola, "/collezione/<int:collezione>/")
 
 if __name__ == '__main__':
     app.run(debug=True)
