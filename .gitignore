@@ -1,5 +1,6 @@
 .project
 .pydevproject
+*.pyc
 COLLEZIONI_FONDO_GABINIO.csv
 COLLEZIONI_FONDO_GABINIO.json
 COLLEZIONI_GAM.csv

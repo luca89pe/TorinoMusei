@@ -6,6 +6,7 @@ from dom import Collezione, Museo
 from sqlalchemy import *
 from sqlalchemy.orm import sessionmaker
 from flask.json import jsonify
+import service
 
 db = create_engine('mysql://root:root@localhost/torinomusei?charset=utf8')
 
@@ -16,26 +17,18 @@ app = Flask(__name__)
 api = Api(app)
 
 class Musei(Resource):
-    def get(self):
-        res = session.query(Museo).all()
-        result = {}
-        for row in res:
-            result[row.id] = row.name
-        return jsonify(result)
-    
+    def get(self):    
+        return dict(service.FindAllMusei()), 200
+        
+
 class Collezioni(Resource):
-    def get(self, museo_id):
-        res = session.query(Collezione).filter(Collezione.museo_id == museo_id)
-        for row in res:
-#             print jsonify(row)
-#         s = text('SELECT * FROM collezioni WHERE museo_id=:id')
-#         s = s.bindparams(id=museo_id)
-#         res = (db.execute(s)).fetchall()
-            return json.dumps([dict(r) for r in res])
+    def get(self, museo):
+        res = service.FindCollezione(museo)
+        return json.dumps([dict(r) for r in res]), 200
 
 
 api.add_resource(Musei, "/musei/")
-api.add_resource(Collezioni, "/musei/<int:museo_id>/")
+api.add_resource(Collezioni, "/musei/<int:museo>/")
 
 if __name__ == '__main__':
     app.run(debug=True)
