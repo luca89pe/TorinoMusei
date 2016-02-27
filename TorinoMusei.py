@@ -18,10 +18,24 @@ api = Api(app)
 class Musei(Resource):
     def get(self):
         res = session.query(Museo).all()
-        print json.dumps(res)
+        result = {}
+        for row in res:
+            result[row.id] = row.name
+        return jsonify(result)
+    
+class Collezioni(Resource):
+    def get(self, museo_id):
+        res = session.query(Collezione).filter(Collezione.museo_id == museo_id)
+        for row in res:
+#             print jsonify(row)
+#         s = text('SELECT * FROM collezioni WHERE museo_id=:id')
+#         s = s.bindparams(id=museo_id)
+#         res = (db.execute(s)).fetchall()
+            return json.dumps([dict(r) for r in res])
 
 
 api.add_resource(Musei, "/musei/")
+api.add_resource(Collezioni, "/musei/<int:museo_id>/")
 
 if __name__ == '__main__':
     app.run(debug=True)
