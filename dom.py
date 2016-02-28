@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
 
@@ -35,5 +35,27 @@ class Collezione(Base):
         self.tecnica = tecnica
         self.dimensioni = dimensioni
         self.immagine = immagine
+        
+class Affluenza(Base):
+    __tablename__ = 'affluenza'
+    
+    id = Column(Integer, primary_key=True)
+    data = Column(Date)
+    intero = Column(Integer)
+    ridotto = Column(Integer)
+    omaggio = Column(Integer)
+    abbonamento = Column(Integer)
+    scuole = Column(Integer)
+    
+    museo_id = Column(Integer, ForeignKey("musei.id"))
+    museo = relationship("Museo", backref=backref("affluenza", order_by=id))
+    
+    def __init__(self, data, intero, ridotto, omaggio, abbonamento, scuole):
+        self.data = data
+        self.intero = intero
+        self.ridotto = ridotto
+        self.omaggio = omaggio
+        self.abbonamento = abbonamento
+        self.scuole = scuole
 
 Base.metadata.create_all(db)

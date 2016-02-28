@@ -14,7 +14,9 @@ def FindAllMusei():
 def FindCollezioniMuseo(museo_id):
     query=text('SELECT * FROM collezioni WHERE museo_id=:museo_id')
     query=query.bindparams(museo_id=museo_id)
-    res=db.execute(query).fetchall()
-    return res
+    return (db.execute(query)).fetchall()
 
-# def FindCollezione(collezione):
+def FindCollezione(collezione):
+    q = text('SELECT * FROM collezioni WHERE id=:collezione')
+    q = q.bindparams(collezione=collezione)
+    return (db.execute(q)).fetchone()

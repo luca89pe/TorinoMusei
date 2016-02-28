@@ -18,7 +18,7 @@ api = Api(app)
 
 class Musei(Resource):
     def get(self):    
-        return dict(service.FindAllMusei()), 200
+        return json.dumps(dict(service.FindAllMusei())), 200
         
 
 class Collezioni(Resource):
@@ -28,8 +28,7 @@ class Collezioni(Resource):
     
 class CollezioneSingola(Resource):
     def get(self, collezione):
-#         res = service.FindCollezione(collezione)
-        return 0
+        return json.dumps([dict(service.FindCollezione(collezione))])
 
 
 api.add_resource(Musei, "/musei/")
