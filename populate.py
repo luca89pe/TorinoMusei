@@ -1,7 +1,7 @@
 import pandas as pd
-from sqlalchemy import *
 from dom import Collezione, Museo, Affluenza
 from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy import create_engine
 
 db = create_engine('mysql://root:root@localhost/torinomusei?charset=utf8')
 
@@ -35,10 +35,10 @@ def populate_collezioni():
 #     gab.to_sql('collezioni', db, if_exists='append', index=False)
 
 def populate_affluenza():
-    gam = pd.read_csv('http://opendata.fondazionetorinomusei.it/resources/download/AFFLUENZA_PUBBLICO_GAM.csv', sep=';', parse_dates=['Data [gg/mm/aaaa]'])
+    gam = pd.read_csv('http://opendata.fondazionetorinomusei.it/resources/download/AFFLUENZA_PUBBLICO_GAM.csv', dayfirst=True, sep=';', parse_dates=['Data [gg/mm/aaaa]'])
     gam.insert(len(gam.columns), "museo_id", 1)
     gam.to_sql('affluenza', db, if_exists='append', index=False)
-    mao = pd.read_csv("http://opendata.fondazionetorinomusei.it/resources/download/AFFLUENZA_PUBBLICO_MAO.csv", sep=';' , parse_dates=['Data [gg/mm/aaaa]'])
+    mao = pd.read_csv("http://opendata.fondazionetorinomusei.it/resources/download/AFFLUENZA_PUBBLICO_MAO.csv", dayfirst=True, sep=';' , parse_dates=['Data [gg/mm/aaaa]'])
     mao.insert(len(mao.columns), "museo_id", 2)
     mao.to_sql('affluenza', db, if_exists='append', index=False)
 
