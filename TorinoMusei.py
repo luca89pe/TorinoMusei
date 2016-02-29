@@ -27,8 +27,8 @@ class Collezioni(Resource):
         return json.dumps([dict(r) for r in res]), 200
     
 class CollezioneSingola(Resource):
-    def get(self, collezione):
-        return json.dumps([dict(service.FindCollezione(collezione))])
+    def get(self, museo, collezione):
+        return json.dumps([dict(service.FindCollezione(museo, collezione))]), 200
 
 class AffluenzaByWeekDay(Resource):
     def get(self, museo):
@@ -38,7 +38,7 @@ class AffluenzaByWeekDay(Resource):
 api.add_resource(Musei, "/musei/")
 api.add_resource(Collezioni, "/musei/<int:museo>/")
 api.add_resource(AffluenzaByWeekDay, "/musei/<int:museo>/affluenza/")
-api.add_resource(CollezioneSingola, "/collezione/<int:collezione>/")
+api.add_resource(CollezioneSingola, "/musei/<int:museo>/<int:collezione>/")
 
 
 if __name__ == '__main__':

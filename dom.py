@@ -58,4 +58,5 @@ class Affluenza(Base):
         self.abbonamento = abbonamento
         self.scuole = scuole
 
-Base.metadata.create_all(db)
+def createDB():
+    Base.metadata.create_all(db)

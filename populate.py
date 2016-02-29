@@ -1,5 +1,5 @@
 import pandas as pd
-from dom import Collezione, Museo, Affluenza
+from dom import *
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy import create_engine
 
@@ -9,9 +9,9 @@ Session = sessionmaker(bind=db)
 session = Session()
 
 def clear_data():
-    db.execute('TRUNCATE TABLE collezioni')
-    db.execute('TRUNCATE TABLE affluenza')
-    db.execute('TRUNCATE TABLE musei')
+    db.execute('DROP TABLE IF EXISTS collezioni')
+    db.execute('DROP TABLE IF EXISTS affluenza')
+    db.execute('DROP TABLE IF EXISTS musei')
 
 def populate_musei():
     session.add_all([
@@ -28,6 +28,7 @@ def populate_collezioni():
     
     mao = pd.read_json("http://opendata.fondazionetorinomusei.it/resources/download/COLLEZIONI_MAO.json")
     mao.insert(len(mao.columns), "museo_id", 2)
+    mao = mao.rename(columns={'index':'id'})
     mao.to_sql('collezioni', db, if_exists='append', index=False)
     
 #     gab = pd.read_json("./COLLEZIONI_FONDO_GABINIO.json")
@@ -37,12 +38,15 @@ def populate_collezioni():
 def populate_affluenza():
     gam = pd.read_csv('http://opendata.fondazionetorinomusei.it/resources/download/AFFLUENZA_PUBBLICO_GAM.csv', dayfirst=True, sep=';', parse_dates=['Data [gg/mm/aaaa]'])
     gam.insert(len(gam.columns), "museo_id", 1)
+    gam = gam.rename(columns = {'Data [gg/mm/aaaa]' : 'data'})
     gam.to_sql('affluenza', db, if_exists='append', index=False)
     mao = pd.read_csv("http://opendata.fondazionetorinomusei.it/resources/download/AFFLUENZA_PUBBLICO_MAO.csv", dayfirst=True, sep=';' , parse_dates=['Data [gg/mm/aaaa]'])
     mao.insert(len(mao.columns), "museo_id", 2)
+    mao = mao.rename(columns = {'Data [gg/mm/aaaa]' : 'data'})
     mao.to_sql('affluenza', db, if_exists='append', index=False)
 
 clear_data()
+createDB()
 populate_musei()
-populate_collezioni()
 populate_affluenza()
+populate_collezioni()

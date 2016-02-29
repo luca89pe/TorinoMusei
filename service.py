@@ -17,17 +17,16 @@ def FindCollezioniMuseo(museo_id):
     query=query.bindparams(museo_id=museo_id)
     return (db.execute(query)).fetchall()
 
-def FindCollezione(collezione):
-    q = text('SELECT * FROM collezioni WHERE id=:collezione')
-    q = q.bindparams(collezione=collezione)
+def FindCollezione(museo, collezione):
+    q = text('SELECT * FROM collezioni WHERE id=:collezione AND museo_id=:museo')
+    q = q.bindparams(collezione=collezione, museo=museo)
     return (db.execute(q)).fetchone()
 
 def AffluenzaByWeekDay(museo):
-    df = pd.read_sql_table('affluenza', db, parse_dates=True)
-    df = df[df['museo_id'] == museo]
-    df['weekday'] = df['Data [gg/mm/aaaa]'].dt.dayofweek
-    print df
+    df = pd.read_sql_table('affluenza', db, parse_dates=['data'])
+    df = df.drop('id', 1)
+    df = df[df['museo_id'] == museo]    # Seleziono solo i record del museo scelto
+    df['weekday'] = df['data'].dt.dayofweek
+    df = df.drop('museo_id', 1)
     dfbyday = df.groupby('weekday').sum()
-    dfbyday.sum(axis=1)
-    return dfbyday.to_json()
-    
+    return (dfbyday.sum(axis=1)).to_json()
