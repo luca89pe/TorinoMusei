@@ -58,5 +58,24 @@ class Affluenza(Base):
         self.abbonamento = abbonamento
         self.scuole = scuole
 
+class Utente(Base):
+    __tablename__ = 'utenti'
+    
+    id = Column(Integer, primary_key=True)
+    username = Column(String(32))
+    password = Column(String(255))
+
+class Token(Base):
+    __tablename__ = 'tokens'
+    
+    utente = Column(Integer, ForeignKey("utenti.id"))
+    token = Column(String(32), primary_key=True)
+    
+    def __init__(self, utente, token):
+        self.utente = utente
+        self.token = token
+        print self.utente
+        print self.token
+
 def createDB():
     Base.metadata.create_all(db)
