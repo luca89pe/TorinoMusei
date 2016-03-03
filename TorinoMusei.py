@@ -58,18 +58,28 @@ class Login(Resource):
             return 'username is not in the DB', 401
         else:
             res = service.generateToken(username, password)
-            if res is None:
+            print res
+            if res == 'wrong':
                 return 'username and/or password are wrong', 401
             else:
                 return json.dumps(dict(res)), 200
+            
+class Logout(Resource):
+    def post(self):
+        token = request.json.get('token')
+        res=service.deleteToken(token)
+        if res == 'token inesistente':
+            return 'user is not logged in', 400
+        return 'logged out', 200
 
-api.add_resource(MuseiLista, "/musei/")
-api.add_resource(MuseiSingolo, "/musei/<int:museo>/")
-api.add_resource(CollezioniMuseo, "/musei/<int:museo>/collezioni/")
-api.add_resource(CollezioneSingola, "/musei/<int:museo>/collezioni/<int:collezione>/")
-api.add_resource(AffluenzaByWeekDay, "/musei/<int:museo>/affluenza/")
-api.add_resource(Signup, "/signup")
-api.add_resource(Login, "/login")
+api.add_resource(MuseiLista, "/musei/")     # Lista di tutti i musei
+api.add_resource(MuseiSingolo, "/musei/<int:museo>/")   # Dettagli di un singolo museo, tramite ID
+api.add_resource(CollezioniMuseo, "/musei/<int:museo>/collezioni/")     # Lista di tutte le collezioni di un singolo museo
+api.add_resource(CollezioneSingola, "/musei/<int:museo>/collezioni/<int:collezione>/")      # Dettagli di una singola collezione
+api.add_resource(AffluenzaByWeekDay, "/musei/<int:museo>/affluenza/")       # Affluenza di un singolo museo
+api.add_resource(Signup, "/signup")     # Registrazione utente
+api.add_resource(Login, "/login")       # Login utente
+api.add_resource(Logout,"/logout")      # Logout utente 
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', threaded=True)

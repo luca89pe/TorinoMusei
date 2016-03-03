@@ -21,7 +21,7 @@ def FindMuseo(museo):
     return db.execute(query).fetchone()
 
 def FindCollezioniMuseo(museo_id):
-    query=text('SELECT * FROM collezioni WHERE museo_id=:museo_id')
+    query=text('SELECT * FROM collezioni WHERE museo_id=:museo_id LIMIT 20')
     query=query.bindparams(museo_id=museo_id)
     return (db.execute(query)).fetchall()
 
@@ -68,21 +68,53 @@ def signup(username, password):
         q = q.bindparams(username=username, password=password)
         db.execute(q)
 
-def generateToken(username, password):
+def auth(username, password):
     q = text('SELECT username FROM utenti WHERE username=:username AND password=:password')
     q = q.bindparams(username=username, password=password)
-    res = db.execute(q).fetchone()
-    if res is None:
-        return None
+    user = db.execute(q).fetchone()
+    if user is not None:
+        print "I dati di accesso sono corretti"
+    else:
+        print "I dati di accesso non sono corretti"
+    return user
+    
+def generateToken(username, password):
+    # Check if username and password are correct, if none returns "wrong"
+    if auth(username, password) is None:
+        return 'wrong'
+    # Username and password are right, so check if the user has an associated token
     utente_id = session.query(Utente).filter(Utente.username==username).one().id
     q = text('SELECT token FROM tokens WHERE utente=:utente_id')
     q = q.bindparams(utente_id=utente_id)
-    res = db.execute(q).fetchone()
-    print res
-    if res is not None:
-        return res
-#     token = uuid.uuid4().hex
-    token = "ciaone"
-    res = session.query(Token).filter(Token.token == token).one().token
-    if res is not None:
-        print "token gia presente: ", res
+    token = db.execute(q).fetchone()
+    print token
+    # If there is a token for that user, returns the token
+    if token is not None:
+        return token
+    # If there isn't token for the user, try to generate one
+    while True:
+        token = uuid.uuid4().hex
+        print token
+        res = session.query(Token).filter(Token.token == token).first()
+        if res is not None:
+            print "esiste gia il token ", token, " nella tabella"
+        if res is None:
+            print "Il token non esiste, quindi lo restituisco al chiamante"
+            break
+    q = text('INSERT INTO tokens VALUES (:utente_id, :token)')
+    q = q.bindparams(utente_id=utente_id, token=token)
+    db.execute(q)
+    d = {'token': token}
+    return d
+
+
+def deleteToken(token):
+    q= text('SELECT token FROM tokens WHERE token=:token')
+    q=q.bindparams(token=token)
+    res=db.execute(q).fetchone()
+    if res is None:
+        return 'token inesistente'
+    q=text('DELETE FROM tokens WHERE token=:token' ) 
+    q=q.bindparams(token=token)
+    res=db.execute(q)
+        
