@@ -9,6 +9,7 @@ Session = sessionmaker(bind=db)
 session = Session()
 
 def clear_data():
+    db.execute('DROP TABLE IF EXISTS preferiti')
     db.execute('DROP TABLE IF EXISTS collezioni')
     db.execute('DROP TABLE IF EXISTS affluenza')
     db.execute('DROP TABLE IF EXISTS musei')

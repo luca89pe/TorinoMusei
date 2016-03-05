@@ -71,12 +71,59 @@ class Logout(Resource):
         if res == 'token inesistente':
             return 'user is not logged in', 400
         return 'logged out', 200
+    
+class Ricerca(Resource):
+    def get(self):
+        query = request.args.get('q')
+        res = service.ricerca(query)
+        return json.dumps([dict(r.serialize()) for r in res]), 200
+
+class Preferiti(Resource):
+    def post(self):
+        token = request.json.get('token')
+        collezione_id = request.json.get('collezione')
+        if token is None or collezione_id is None:
+            return 'errore argomenti', 400
+        utente_id = service.checkToken(token)
+        if utente_id is None:
+            return 'token inesistente', 400
+        if service.checkCollezione(collezione_id) is None:
+            return 'collezione inesistente', 400
+        if service.addPreferito(utente_id, collezione_id) is 'exists':
+            return 'esiste gia', 400
+        return 'added', 201
+    
+    def get(self):
+        token = request.args.get('token')
+        if token is None:
+            return 'errore argomenti', 400
+        utente_id = service.checkToken(token)
+        if utente_id is None:
+            return 'token inesistente', 400
+        res = service.findPreferiti(utente_id)
+        if not res:
+            return 'no preferiti', 400
+        return json.dumps([dict(r.serialize()) for r in res])
+    def delete(self):
+        token = request.json.get('token')
+        collezione_id = request.json.get('collezione')
+        if token is None or collezione_id is None:
+            return 'errore argomenti', 400
+        utente_id = service.checkToken(token)
+        if utente_id is None:
+            return 'token inesistente', 400
+        if service.checkCollezione(collezione_id) is None:
+            return 'collezione inesistente', 400
+        service.deletePreferito(utente_id, collezione_id)
+        return 'preferito rimosso', 200
 
 api.add_resource(MuseiLista, "/musei/")     # Lista di tutti i musei
 api.add_resource(MuseiSingolo, "/musei/<int:museo>/")   # Dettagli di un singolo museo, tramite ID
 api.add_resource(CollezioniMuseo, "/musei/<int:museo>/collezioni/")     # Lista di tutte le collezioni di un singolo museo
 api.add_resource(CollezioneSingola, "/musei/<int:museo>/collezioni/<int:collezione>/")      # Dettagli di una singola collezione
 api.add_resource(AffluenzaByWeekDay, "/musei/<int:museo>/affluenza/")       # Affluenza di un singolo museo
+api.add_resource(Preferiti, "/preferiti")    # Aggiungi/Mostra preferiti
+api.add_resource(Ricerca, "/musei/search")  # Ricerca
 api.add_resource(Signup, "/signup")     # Registrazione utente
 api.add_resource(Login, "/login")       # Login utente
 api.add_resource(Logout,"/logout")      # Logout utente 

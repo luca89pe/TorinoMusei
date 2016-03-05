@@ -28,6 +28,18 @@ class Collezione(Base):
     museo_id = Column(Integer, ForeignKey("musei.id"))
     museo = relationship("Museo", backref=backref("collezione", order_by=id))
     
+    def serialize(self):
+        return {
+                'id':self.id,
+                'titolo':self.titolo,
+                'autore':self.autore,
+                'datazione':self.datazione,
+                'tecnica':self.tecnica,
+                'dimensioni':self.dimensioni,
+                'immagine':self.immagine,
+                'museo_id':self.museo_id
+                }
+    
     def __init__(self, titolo, autore, datazione, tecnica, dimensioni, immagine):
         self.titolo = titolo
         self.autore = autore
@@ -74,8 +86,17 @@ class Token(Base):
     def __init__(self, utente, token):
         self.utente = utente
         self.token = token
-        print self.utente
-        print self.token
+
+class Preferiti(Base):
+    __tablename__ = 'preferiti'
+    
+    id = Column(Integer, primary_key=True)
+    utente_id = Column(Integer, ForeignKey("utenti.id"))
+    collezione_id = Column(Integer, ForeignKey("collezioni.id"))
+    
+    def __init__(self, utente_id, collezione_id):
+        self.utente_id = utente_id
+        self.collezione_id = collezione_id
 
 def createDB():
     Base.metadata.create_all(db)

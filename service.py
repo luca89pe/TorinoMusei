@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine, text
-from dom import Museo, Collezione, Utente, Token
+from dom import Museo, Collezione, Utente, Token, Preferiti
 from sqlalchemy.orm.session import sessionmaker
 import pandas as pd
 import uuid
@@ -117,4 +117,41 @@ def deleteToken(token):
     q=text('DELETE FROM tokens WHERE token=:token' ) 
     q=q.bindparams(token=token)
     res=db.execute(q)
-        
+
+def ricerca(query):
+    res = session.query(Collezione).filter((Collezione.titolo.ilike('%'+query+'%')) | (Collezione.autore.ilike('%'+query+'%')) | (Collezione.tecnica.ilike('%'+query+'%'))).all()
+    print res, "type: ",type(res)
+    return res
+
+# Verifico che il token sia associato a qualche utente. In caso positivo, ritorno l'id dell'utente
+def checkToken(token):
+    res = session.query(Token).filter(Token.token == token).one_or_none()
+    if res is None:
+        return None
+    return res.utente
+
+# Verifico che la collezione esista nel db
+def checkCollezione(collezione_id):
+    res = session.query(Collezione).filter(Collezione.id == collezione_id).one_or_none()
+    if res is None:
+        return None
+    return res.id
+
+def addPreferito(utente_id, collezione_id):
+    res = session.query(Preferiti).filter(Preferiti.utente_id == utente_id, Preferiti.collezione_id == collezione_id).one_or_none()
+    if res is not None:
+        return 'exists'
+    preferito = Preferiti(utente_id, collezione_id)
+    session.add(preferito)
+    session.commit()
+
+def findPreferiti(utente_id):
+    preferiti = session.query(Preferiti).filter(Preferiti.utente_id == utente_id).all()
+    if preferiti is None:
+        return None
+    collezioni = session.query(Collezione).filter(Collezione.id.in_(row.id for row in preferiti)).all()
+    return collezioni
+
+def deletePreferito(utente_id, collezione_id):
+    session.query(Preferiti).filter(Preferiti.utente_id == utente_id, Preferiti.collezione_id == collezione_id).delete()
+    session.commit()
