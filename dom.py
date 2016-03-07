@@ -13,6 +13,12 @@ class Museo(Base):
     
     def __init__(self, name):
         self.name = name
+        
+    def serialize(self):
+        return {
+                'id': self.id,
+                'name': self.name
+                }
 
 class Collezione(Base):
     __tablename__ = 'collezioni'
@@ -76,6 +82,10 @@ class Utente(Base):
     id = Column(Integer, primary_key=True)
     username = Column(String(32))
     password = Column(String(255))
+    
+    def __init__(self, username, password):
+        self.username = username
+        self.password = password
 
 class Token(Base):
     __tablename__ = 'tokens'

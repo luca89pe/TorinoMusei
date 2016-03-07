@@ -4,6 +4,7 @@ from sqlalchemy.orm.session import sessionmaker
 import pandas as pd
 import uuid
 from flask.json import jsonify
+import time
 
 db = create_engine('mysql://root:root@localhost/torinomusei?charset=utf8')
 Session = sessionmaker(bind=db)
@@ -11,19 +12,21 @@ session = Session()
 
 
 def FindAllMusei():
-    query = text('SELECT * FROM musei')
-    results = db.execute(query)
-    return results.fetchall()
+    return session.query(Museo).all()
 
 def FindMuseo(museo):
     query = text('SELECT * FROM musei WHERE id = :museo')
     query = query.bindparams(museo = museo)
     return db.execute(query).fetchone()
 
-def FindCollezioniMuseo(museo_id):
-    query=text('SELECT * FROM collezioni WHERE museo_id=:museo_id LIMIT 20')
+def FindCollezioniMuseo(museo_id, start, step):
+    print "start: ", start, " - step: ", step
+    start = int(start)
+    step = int(step)
+    query=text('SELECT * FROM collezioni WHERE museo_id=:museo_id')
     query=query.bindparams(museo_id=museo_id)
-    return (db.execute(query)).fetchall()
+    res = db.execute(query).fetchall()
+    return res[start:(start+step)]
 
 def FindCollezione(museo, collezione):
     q = text('SELECT * FROM collezioni WHERE id=:collezione AND museo_id=:museo')
@@ -41,15 +44,25 @@ def AffluenzaByWeekDay(museo):
     dfbyday = df.groupby('weekday').sum()
     return (dfbyday.sum(axis=1)).to_json()
 
-def AffluenzaByWeekDayPlot(museo):
+def MediaAffluenzaByWeekDay(museo):
     # Query sql fatta direttamente con pandas
     df = pd.read_sql_table('affluenza', db, parse_dates=['data'])
     df = df.drop('id', 1)
     df = df[df['museo_id'] == museo]
     df = df.drop('museo_id', 1)
     df['weekday'] = df['data'].dt.dayofweek
+    giorni = {}
+    giorni[0] = len(df[df['weekday']==0].index)
+    giorni[1] = len(df[df['weekday']==1].index)
+    giorni[2] = len(df[df['weekday']==2].index)
+    giorni[3] = len(df[df['weekday']==3].index)
+    giorni[4] = len(df[df['weekday']==4].index)
+    giorni[5] = len(df[df['weekday']==5].index)
+    giorni[6] = len(df[df['weekday']==6].index)
     dfbyday = df.groupby('weekday').sum()
-    return dfbyday.sum(axis=1)
+    dfbyday = dfbyday.sum(axis=1)
+    media = dfbyday / giorni[1]
+    return dict(media)
 
 def isUserInDb(username):
     q = text('SELECT * FROM utenti WHERE username = :username')
@@ -64,9 +77,13 @@ def signup(username, password):
     if isUserInDb(username):
         return 'exists'
     else:
-        q = text('INSERT INTO utenti(username, password) VALUES (:username, :password)')
-        q = q.bindparams(username=username, password=password)
-        db.execute(q)
+        utente = Utente(username, password)
+        session.add(utente)
+        session.commit()
+        time.sleep(0.5)
+        res = session.query(Utente).filter(Utente.username == username).first()
+        if res is None:
+            return 'ko'
 
 def auth(username, password):
     q = text('SELECT username FROM utenti WHERE username=:username AND password=:password')
@@ -83,7 +100,8 @@ def generateToken(username, password):
     if auth(username, password) is None:
         return 'wrong'
     # Username and password are right, so check if the user has an associated token
-    utente_id = session.query(Utente).filter(Utente.username==username).one().id
+    utente_id = session.query(Utente).filter(Utente.username==username).first()
+    utente_id = utente_id.id
     q = text('SELECT token FROM tokens WHERE utente=:utente_id')
     q = q.bindparams(utente_id=utente_id)
     token = db.execute(q).fetchone()
@@ -149,7 +167,7 @@ def findPreferiti(utente_id):
     preferiti = session.query(Preferiti).filter(Preferiti.utente_id == utente_id).all()
     if preferiti is None:
         return None
-    collezioni = session.query(Collezione).filter(Collezione.id.in_(row.id for row in preferiti)).all()
+    collezioni = session.query(Collezione).filter(Collezione.id.in_(row.collezione_id for row in preferiti)).all()
     return collezioni
 
 def deletePreferito(utente_id, collezione_id):

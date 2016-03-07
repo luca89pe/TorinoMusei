@@ -1,9 +1,10 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, url_for
 import json
 from flask_restful import Resource, Api
 from dom import Collezione, Museo
 import service
 from flask.ext.cors import CORS
+from werkzeug import redirect
 
 app = Flask(__name__)
 CORS(app)
@@ -12,7 +13,7 @@ api = Api(app)
 class MuseiLista(Resource):
     def get(self):
         res = service.FindAllMusei()
-        return json.dumps([dict(r) for r in res]), 200
+        return json.dumps([dict(r.serialize()) for r in res]), 200
 
 class MuseiSingolo(Resource):
     def get(self, museo):
@@ -21,7 +22,9 @@ class MuseiSingolo(Resource):
 
 class CollezioniMuseo(Resource):
     def get(self, museo):
-        res = service.FindCollezioniMuseo(museo)
+        start = request.args.get('start')
+        step = 30
+        res = service.FindCollezioniMuseo(museo, start, step)
         return json.dumps([dict(r) for r in res]), 200
     
 class CollezioneSingola(Resource):
@@ -31,7 +34,8 @@ class CollezioneSingola(Resource):
 
 class AffluenzaByWeekDay(Resource):
     def get(self, museo):
-        res = service.AffluenzaByWeekDay(museo)
+#         res = service.AffluenzaByWeekDay(museo)
+        res = service.MediaAffluenzaByWeekDay(museo)
         return res, 200
 
 class Signup(Resource):
@@ -45,8 +49,11 @@ class Signup(Resource):
         res = service.signup(username, password)
         if res == 'exists':
             return 'the username exists in the database', 400
+        elif res == 'ko':
+            return 'generic error', 400
         else:
-            return 'signed up', 201
+#             return service.generateToken(username, password), 201
+            return redirect(url_for('login'), code=307)
 
 class Login(Resource):
     def post(self):
@@ -82,6 +89,8 @@ class Preferiti(Resource):
     def post(self):
         token = request.json.get('token')
         collezione_id = request.json.get('collezione')
+        print token
+        print collezione_id
         if token is None or collezione_id is None:
             return 'errore argomenti', 400
         utente_id = service.checkToken(token)
@@ -90,7 +99,7 @@ class Preferiti(Resource):
         if service.checkCollezione(collezione_id) is None:
             return 'collezione inesistente', 400
         if service.addPreferito(utente_id, collezione_id) is 'exists':
-            return 'esiste gia', 400
+            return 'esiste gia', 200
         return 'added', 201
     
     def get(self):
@@ -119,7 +128,7 @@ class Preferiti(Resource):
 
 api.add_resource(MuseiLista, "/musei/")     # Lista di tutti i musei
 api.add_resource(MuseiSingolo, "/musei/<int:museo>/")   # Dettagli di un singolo museo, tramite ID
-api.add_resource(CollezioniMuseo, "/musei/<int:museo>/collezioni/")     # Lista di tutte le collezioni di un singolo museo
+api.add_resource(CollezioniMuseo, "/musei/<int:museo>/collezioni")     # Lista di tutte le collezioni di un singolo museo
 api.add_resource(CollezioneSingola, "/musei/<int:museo>/collezioni/<int:collezione>/")      # Dettagli di una singola collezione
 api.add_resource(AffluenzaByWeekDay, "/musei/<int:museo>/affluenza/")       # Affluenza di un singolo museo
 api.add_resource(Preferiti, "/preferiti")    # Aggiungi/Mostra preferiti
