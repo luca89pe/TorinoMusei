@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, url_for
+from flask import Flask, request, jsonify, url_for, send_file
 import json
 from flask_restful import Resource, Api
 from dom import Collezione, Museo
@@ -25,6 +25,7 @@ class CollezioniMuseo(Resource):
         start = request.args.get('start')
         step = 30
         res = service.FindCollezioniMuseo(museo, start, step)
+        print res
         return json.dumps([dict(r) for r in res]), 200
     
 class CollezioneSingola(Resource):
@@ -36,7 +37,7 @@ class AffluenzaByWeekDay(Resource):
     def get(self, museo):
 #         res = service.AffluenzaByWeekDay(museo)
         res = service.MediaAffluenzaByWeekDay(museo)
-        return res, 200
+        return json.dumps(dict(res)), 200
 
 class Signup(Resource):
     def post(self):
@@ -51,9 +52,10 @@ class Signup(Resource):
             return 'the username exists in the database', 400
         elif res == 'ko':
             return 'generic error', 400
-        else:
 #             return service.generateToken(username, password), 201
-            return redirect(url_for('login'), code=307)
+#             return redirect(url_for('login'), code=307)
+        print 'return signup2: ',res
+        return 'signed up', 201
 
 class Login(Resource):
     def post(self):
@@ -72,8 +74,8 @@ class Login(Resource):
                 return json.dumps(dict(res)), 200
             
 class Logout(Resource):
-    def post(self):
-        token = request.json.get('token')
+    def delete(self):
+        token = request.args.get('token')
         res=service.deleteToken(token)
         if res == 'token inesistente':
             return 'user is not logged in', 400
@@ -81,8 +83,13 @@ class Logout(Resource):
     
 class Ricerca(Resource):
     def get(self):
-        query = request.args.get('q')
-        res = service.ricerca(query)
+        query = request.args.get('query')
+        searchType = request.args.get('type')
+        start = request.args.get('start')
+        print query, " - ", searchType, " - ", start
+        if query is None or searchType is None or start is None:
+            return 'errore argomenti', 404
+        res = service.ricerca(query, searchType, start)
         return json.dumps([dict(r.serialize()) for r in res]), 200
 
 class Preferiti(Resource):
@@ -104,18 +111,26 @@ class Preferiti(Resource):
     
     def get(self):
         token = request.args.get('token')
+        print 'getPreferiti: ', token
         if token is None:
+            print 'errore argomenti'
             return 'errore argomenti', 400
         utente_id = service.checkToken(token)
+        print "risultato di checktoken" , utente_id
         if utente_id is None:
+            print 'token inesistente'
             return 'token inesistente', 400
         res = service.findPreferiti(utente_id)
         if not res:
-            return 'no preferiti', 400
+            print 'no preferiti'
+            return 'no preferiti', 204
+        for r in res:
+            print r.serialize()
         return json.dumps([dict(r.serialize()) for r in res])
+    
     def delete(self):
-        token = request.json.get('token')
-        collezione_id = request.json.get('collezione')
+        token = request.args.get('token')
+        collezione_id = request.args.get('collezione')
         if token is None or collezione_id is None:
             return 'errore argomenti', 400
         utente_id = service.checkToken(token)
@@ -126,16 +141,60 @@ class Preferiti(Resource):
         service.deletePreferito(utente_id, collezione_id)
         return 'preferito rimosso', 200
 
+class Thumbnail(Resource):
+    def get(self):
+        url = request.args.get('url')
+        print url
+        import urllib2 as urllib
+        from cStringIO import StringIO
+        
+        img_file = urllib.urlopen('https://images1-focus-opensocial.googleusercontent.com/gadgets/proxy?url='+url+'&container=focus&resize_h=100')
+        im = StringIO(img_file.read())
+        print im
+        return send_file(im, mimetype='image/jpeg')
+
+class ChangePassword(Resource):
+    def put(self):
+        token = request.json.get('token')
+        password = request.json.get('password')
+        newpassword = request.json.get('newpassword')
+        if password is None or newpassword is None or token is None:
+            return 'errore argomenti', 400
+        utente_id = service.checkToken(token)
+        if utente_id is None:
+            return 'token inesistente', 400
+        res = service.changePassword(utente_id, password, newpassword)
+        print res
+        if res == 'password errata':
+            return 'password errata', 400
+        return 'changed', 200
+
+class DeleteAccount(Resource):
+    def delete(self):
+        token = request.json.get('token')
+        if token is None:
+            return 'errore argomenti', 400
+        utente_id = service.checkToken(token)
+        if utente_id is None:
+            return 'token inesistente', 400
+        service.deleteAccount(utente_id)
+        return 'utente rimosso', 200
+        
+
 api.add_resource(MuseiLista, "/musei/")     # Lista di tutti i musei
 api.add_resource(MuseiSingolo, "/musei/<int:museo>/")   # Dettagli di un singolo museo, tramite ID
 api.add_resource(CollezioniMuseo, "/musei/<int:museo>/collezioni")     # Lista di tutte le collezioni di un singolo museo
 api.add_resource(CollezioneSingola, "/musei/<int:museo>/collezioni/<int:collezione>/")      # Dettagli di una singola collezione
 api.add_resource(AffluenzaByWeekDay, "/musei/<int:museo>/affluenza/")       # Affluenza di un singolo museo
 api.add_resource(Preferiti, "/preferiti")    # Aggiungi/Mostra preferiti
-api.add_resource(Ricerca, "/musei/search")  # Ricerca
+api.add_resource(Ricerca, "/search")  # Ricerca
 api.add_resource(Signup, "/signup")     # Registrazione utente
 api.add_resource(Login, "/login")       # Login utente
-api.add_resource(Logout,"/logout")      # Logout utente 
+api.add_resource(Logout,"/logout")      # Logout utente
+api.add_resource(ChangePassword, "/profile/changePassword") # Cambio password utente
+api.add_resource(DeleteAccount, "/profile/delete")  # Elimina account
+
+api.add_resource(Thumbnail, "/thumb")
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', threaded=True)

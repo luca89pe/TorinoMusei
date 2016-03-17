@@ -12,7 +12,7 @@ session = Session()
 
 
 def FindAllMusei():
-    return session.query(Museo).all()
+    return session.query(Museo).limit(3)
 
 def FindMuseo(museo):
     query = text('SELECT * FROM musei WHERE id = :museo')
@@ -47,22 +47,12 @@ def AffluenzaByWeekDay(museo):
 def MediaAffluenzaByWeekDay(museo):
     # Query sql fatta direttamente con pandas
     df = pd.read_sql_table('affluenza', db, parse_dates=['data'])
-    df = df.drop('id', 1)
+    df = df.drop('id', 1)   # 1 indica l'asse (ossia elimina la colonna, e non la riga
     df = df[df['museo_id'] == museo]
     df = df.drop('museo_id', 1)
     df['weekday'] = df['data'].dt.dayofweek
-    giorni = {}
-    giorni[0] = len(df[df['weekday']==0].index)
-    giorni[1] = len(df[df['weekday']==1].index)
-    giorni[2] = len(df[df['weekday']==2].index)
-    giorni[3] = len(df[df['weekday']==3].index)
-    giorni[4] = len(df[df['weekday']==4].index)
-    giorni[5] = len(df[df['weekday']==5].index)
-    giorni[6] = len(df[df['weekday']==6].index)
-    dfbyday = df.groupby('weekday').sum()
-    dfbyday = dfbyday.sum(axis=1)
-    media = dfbyday / giorni[1]
-    return dict(media)
+    media = df.groupby('weekday').mean().sum(axis=1).round(2)
+    return media
 
 def isUserInDb(username):
     q = text('SELECT * FROM utenti WHERE username = :username')
@@ -76,14 +66,15 @@ def isUserInDb(username):
 def signup(username, password):
     if isUserInDb(username):
         return 'exists'
-    else:
-        utente = Utente(username, password)
-        session.add(utente)
-        session.commit()
-        time.sleep(0.5)
-        res = session.query(Utente).filter(Utente.username == username).first()
-        if res is None:
-            return 'ko'
+    utente = Utente(username, password)
+    session.add(utente)
+    session.commit()
+    time.sleep(0.5)
+    res = session.query(Utente).filter(Utente.username == username).first()
+    print 'return signup ', res
+    if res is None:
+        return 'ko'
+    return res
 
 def auth(username, password):
     q = text('SELECT username FROM utenti WHERE username=:username AND password=:password')
@@ -136,14 +127,21 @@ def deleteToken(token):
     q=q.bindparams(token=token)
     res=db.execute(q)
 
-def ricerca(query):
-    res = session.query(Collezione).filter((Collezione.titolo.ilike('%'+query+'%')) | (Collezione.autore.ilike('%'+query+'%')) | (Collezione.tecnica.ilike('%'+query+'%'))).all()
+def ricerca(query, searchType, start):
+    print query, " - ", searchType, " - ", start
+    step = 30
+    start = int(start)
+    res = session.query(Collezione).filter(getattr(Collezione, searchType).ilike("%"+query+"%")).all()
     print res, "type: ",type(res)
-    return res
+    return res[start:(start+step)]
 
 # Verifico che il token sia associato a qualche utente. In caso positivo, ritorno l'id dell'utente
 def checkToken(token):
-    res = session.query(Token).filter(Token.token == token).one_or_none()
+    print 'service.checkToken: ',token
+    q = text('SELECT * FROM tokens WHERE token=:token')
+    q = q.bindparams(token=token)
+    res = db.execute(q).fetchone()
+    print "cerca token: ",res
     if res is None:
         return None
     return res.utente
@@ -164,12 +162,30 @@ def addPreferito(utente_id, collezione_id):
     session.commit()
 
 def findPreferiti(utente_id):
+    print "findPreferiti - utente_id: ", utente_id
     preferiti = session.query(Preferiti).filter(Preferiti.utente_id == utente_id).all()
     if preferiti is None:
         return None
-    collezioni = session.query(Collezione).filter(Collezione.id.in_(row.collezione_id for row in preferiti)).all()
+    preferiti_id = []
+    for p in preferiti:
+        preferiti_id.append(p.id)
+#     preferiti_id = preferiti.id.tolist()
+    print "preferiti_id: ", preferiti_id
+#     collezioni = session.query(Collezione).filter(Collezione.id.in_(row.collezione_id for row in preferiti)).all()
+    collezioni = session.query(Collezione).filter(Collezione.id.in_(preferiti_id)).all()
     return collezioni
 
 def deletePreferito(utente_id, collezione_id):
     session.query(Preferiti).filter(Preferiti.utente_id == utente_id, Preferiti.collezione_id == collezione_id).delete()
+    session.commit()
+
+def changePassword(utente_id, password, newpassword):
+    utente = session.query(Utente).filter(Utente.id == utente_id, Utente.password == password).one_or_none()
+    if utente is None:
+        return 'password errata'
+    session.query(Utente).filter(Utente.id == utente_id).update({Utente.password : newpassword})
+    session.commit()
+
+def deleteAccount(utente_id):
+    session.query(Utente).filter(Utente.id == utente_id).delete()
     session.commit()
