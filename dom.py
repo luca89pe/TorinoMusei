@@ -86,6 +86,12 @@ class Utente(Base):
     def __init__(self, username, password):
         self.username = username
         self.password = password
+    
+    def serialize(self):
+        return {
+                'id': self.id,
+                'username': self.username
+                }
 
 class Token(Base):
     __tablename__ = 'tokens'

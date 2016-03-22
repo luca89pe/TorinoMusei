@@ -12,7 +12,8 @@ session = Session()
 
 
 def FindAllMusei():
-    return session.query(Museo).limit(3)
+    q = text('SELECT * FROM musei LIMIT 3')
+    return db.execute(q).fetchall()
 
 def FindMuseo(museo):
     query = text('SELECT * FROM musei WHERE id = :museo')
@@ -168,7 +169,7 @@ def findPreferiti(utente_id):
         return None
     preferiti_id = []
     for p in preferiti:
-        preferiti_id.append(p.id)
+        preferiti_id.append(p.collezione_id)
 #     preferiti_id = preferiti.id.tolist()
     print "preferiti_id: ", preferiti_id
 #     collezioni = session.query(Collezione).filter(Collezione.id.in_(row.collezione_id for row in preferiti)).all()
@@ -189,3 +190,6 @@ def changePassword(utente_id, password, newpassword):
 def deleteAccount(utente_id):
     session.query(Utente).filter(Utente.id == utente_id).delete()
     session.commit()
+
+def getUtenteFromId(utente_id):
+    return session.query(Utente).filter(Utente.id == utente_id).one_or_none()

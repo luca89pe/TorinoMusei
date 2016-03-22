@@ -13,7 +13,8 @@ api = Api(app)
 class MuseiLista(Resource):
     def get(self):
         res = service.FindAllMusei()
-        return json.dumps([dict(r.serialize()) for r in res]), 200
+        print res
+        return json.dumps([dict(r) for r in res]), 200
 
 class MuseiSingolo(Resource):
     def get(self, museo):
@@ -37,6 +38,7 @@ class AffluenzaByWeekDay(Resource):
     def get(self, museo):
 #         res = service.AffluenzaByWeekDay(museo)
         res = service.MediaAffluenzaByWeekDay(museo)
+        print res
         return json.dumps(dict(res)), 200
 
 class Signup(Resource):
@@ -75,7 +77,7 @@ class Login(Resource):
             
 class Logout(Resource):
     def delete(self):
-        token = request.args.get('token')
+        token = request.json.get('token')
         res=service.deleteToken(token)
         if res == 'token inesistente':
             return 'user is not logged in', 400
@@ -179,6 +181,17 @@ class DeleteAccount(Resource):
             return 'token inesistente', 400
         service.deleteAccount(utente_id)
         return 'utente rimosso', 200
+    
+class RitornaUtente(Resource):
+    def get(self):
+        token = request.args.get('token')
+        if token is None:
+            return 'errore argomenti', 400
+        utente_id = service.checkToken(token)
+        if utente_id is None:
+            return 'token inesistente', 400
+        res = service.getUtenteFromId(utente_id)
+        return json.dumps(res.serialize()), 200
         
 
 api.add_resource(MuseiLista, "/musei/")     # Lista di tutti i musei
@@ -193,7 +206,7 @@ api.add_resource(Login, "/login")       # Login utente
 api.add_resource(Logout,"/logout")      # Logout utente
 api.add_resource(ChangePassword, "/profile/changePassword") # Cambio password utente
 api.add_resource(DeleteAccount, "/profile/delete")  # Elimina account
-
+api.add_resource(RitornaUtente, "/profile/utente") # Ritorna l'utente dal token
 api.add_resource(Thumbnail, "/thumb")
 
 if __name__ == '__main__':
