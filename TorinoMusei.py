@@ -99,7 +99,7 @@ class Preferiti(Resource):
         token = request.json.get('token')
         collezione_id = request.json.get('collezione')
         print token
-        print collezione_id
+        print "Collezione da aggiungere: ",collezione_id
         if token is None or collezione_id is None:
             return 'errore argomenti', 400
         utente_id = service.checkToken(token)

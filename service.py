@@ -7,7 +7,7 @@ from flask.json import jsonify
 import time
 
 db = create_engine('mysql://root:root@localhost/torinomusei?charset=utf8')
-Session = sessionmaker(bind=db)
+Session = sessionmaker(bind=db, autocommit=True)
 session = Session()
 
 
@@ -155,12 +155,18 @@ def checkCollezione(collezione_id):
     return res.id
 
 def addPreferito(utente_id, collezione_id):
-    res = session.query(Preferiti).filter(Preferiti.utente_id == utente_id, Preferiti.collezione_id == collezione_id).one_or_none()
+    q = text('SELECT * FROM preferiti WHERE utente_id = :utente_id AND collezione_id = :collezione_id')
+    q = q.bindparams(utente_id=utente_id, collezione_id=collezione_id)
+    res = db.execute(q).fetchone()
+#     res = session.query(Preferiti).filter(Preferiti.utente_id == utente_id, Preferiti.collezione_id == collezione_id).one_or_none()
     if res is not None:
         return 'exists'
-    preferito = Preferiti(utente_id, collezione_id)
-    session.add(preferito)
-    session.commit()
+    q = text('INSERT INTO preferiti(utente_id, collezione_id) VALUES(:utente_id, :collezione_id)')
+    q = q.bindparams(utente_id=utente_id, collezione_id=collezione_id)
+    db.execute(q)
+#     preferito = Preferiti(utente_id, collezione_id)
+#     session.add(preferito)
+#     session.commit()
 
 def findPreferiti(utente_id):
     print "findPreferiti - utente_id: ", utente_id
